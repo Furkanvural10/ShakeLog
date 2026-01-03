@@ -17,6 +17,19 @@ protocol LogViewControllerInterface: AnyObject {
 @available(iOS 13.0.0, *)
 final class LogViewController: UIViewController {
     
+    private var viewModel: LogViewModelInterface
+    
+    init(viewModel: LogViewModelInterface) {
+        self.viewModel = viewModel
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    
+    
     private var allLogs: [LogEntry] = []
     private var filteredLogs: [LogEntry] = []
     private var selectedLevel: LogLevel?
@@ -56,70 +69,17 @@ final class LogViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
+        viewModel.view = self
+        
+        Task {
+            @MainActor [viewModel] in
+            await viewModel.handleViewDidLoad()
+        }
+        
         loadLogs()
     }
     
-    private func setupUI() {
-        title = "App Logs"
-        view.backgroundColor = .systemBackground
-        
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
-            barButtonSystemItem: .close,
-            target: self,
-            action: #selector(closeTapped)
-        )
-        
-        let exportButton = UIBarButtonItem(
-            barButtonSystemItem: .action,
-            target: self,
-            action: #selector(exportTapped)
-        )
-        
-        let clearButton = UIBarButtonItem(
-            title: "Clear",
-            style: .plain,
-            target: self,
-            action: #selector(clearTapped)
-        )
-        
-        navigationItem.rightBarButtonItems = [exportButton, clearButton]
-        
-
-        view.addSubview(searchBar)
-        view.addSubview(filterSegmentedControl)
-        view.addSubview(headerLabel)
-        view.addSubview(tableView)
-        
-        
-        tableView.delegate = self
-        tableView.dataSource = self
-        tableView.register(LogCell.self, forCellReuseIdentifier: "LogCell")
-        
-
-        searchBar.delegate = self
-        
-        filterSegmentedControl.addTarget(self, action: #selector(filterChanged), for: .valueChanged)
-        
-        NSLayoutConstraint.activate([
-            searchBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            searchBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            searchBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            
-            filterSegmentedControl.topAnchor.constraint(equalTo: searchBar.bottomAnchor, constant: 8),
-            filterSegmentedControl.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            filterSegmentedControl.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            
-            headerLabel.topAnchor.constraint(equalTo: filterSegmentedControl.bottomAnchor, constant: 8),
-            headerLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            headerLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            
-            tableView.topAnchor.constraint(equalTo: headerLabel.bottomAnchor, constant: 8),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-    }
+    
     
     private func loadLogs() {
         allLogs = Logger.shared.getMemoryLogs()
@@ -243,5 +203,69 @@ extension LogViewController: UISearchBarDelegate {
     
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         searchBar.resignFirstResponder()
+    }
+}
+
+@available(iOS 13.0.0, *)
+extension LogViewController: LogViewControllerInterface {
+    func setupUI() {
+        title = "App Logs"
+        view.backgroundColor = .systemBackground
+        
+        navigationItem.leftBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .close,
+            target: self,
+            action: #selector(closeTapped)
+        )
+        
+        let exportButton = UIBarButtonItem(
+            barButtonSystemItem: .action,
+            target: self,
+            action: #selector(exportTapped)
+        )
+        
+        let clearButton = UIBarButtonItem(
+            title: "Clear",
+            style: .plain,
+            target: self,
+            action: #selector(clearTapped)
+        )
+        
+        navigationItem.rightBarButtonItems = [exportButton, clearButton]
+        
+
+        view.addSubview(searchBar)
+        view.addSubview(filterSegmentedControl)
+        view.addSubview(headerLabel)
+        view.addSubview(tableView)
+        
+        
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.register(LogCell.self, forCellReuseIdentifier: "LogCell")
+        
+
+        searchBar.delegate = self
+        
+        filterSegmentedControl.addTarget(self, action: #selector(filterChanged), for: .valueChanged)
+        
+        NSLayoutConstraint.activate([
+            searchBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            searchBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            searchBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            
+            filterSegmentedControl.topAnchor.constraint(equalTo: searchBar.bottomAnchor, constant: 8),
+            filterSegmentedControl.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            filterSegmentedControl.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            
+            headerLabel.topAnchor.constraint(equalTo: filterSegmentedControl.bottomAnchor, constant: 8),
+            headerLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            headerLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            
+            tableView.topAnchor.constraint(equalTo: headerLabel.bottomAnchor, constant: 8),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
     }
 }
