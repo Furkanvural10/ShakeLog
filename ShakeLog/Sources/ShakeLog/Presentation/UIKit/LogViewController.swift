@@ -11,6 +11,7 @@ import UIKit
 @available(iOS 13.0.0, *)
 protocol LogViewControllerInterface: AnyObject {
     func setupUI() async
+    func updateHeader(filteredLogs: Int, allLogs: Int)
 }
 
 
@@ -27,12 +28,7 @@ final class LogViewController: UIViewController {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
-    
-    
-    private var allLogs: [LogEntry] = []
-    private var filteredLogs: [LogEntry] = []
-    private var selectedLevel: LogLevel?
+
     
     private let tableView: UITableView = {
         let table = UITableView()
@@ -76,15 +72,15 @@ final class LogViewController: UIViewController {
             await viewModel.handleViewDidLoad()
         }
         
-        loadLogs()
+        
     }
     
     
     
-    private func loadLogs() {
-        allLogs = Logger.shared.getMemoryLogs()
+    private func loadLogs() async {
+        
         filterLogs()
-        updateHeader()
+        
     }
     
     private func filterLogs() {
@@ -105,8 +101,8 @@ final class LogViewController: UIViewController {
         tableView.reloadData()
     }
     
-    private func updateHeader() {
-        headerLabel.text = "Showing \(filteredLogs.count) of \(allLogs.count) logs"
+    func updateHeader(filteredLogs: Int, allLogs: Int) {
+        headerLabel.text = "Showing \(filteredLogs) of \(allLogs) logs"
     }
     
     @objc private func filterChanged() {
