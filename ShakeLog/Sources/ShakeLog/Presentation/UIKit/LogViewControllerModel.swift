@@ -46,7 +46,7 @@ extension LogViewControllerModel: LogViewModelInterface {
     }
     
     private func loadLogs() async {
-        dataSource = Logger.shared.getMemoryLogs()
+        dataSource = Logger.shared.getMemoryLogs().reversed()
         await view?.updateHeader(filteredLogs: filteredLogs.count, allLogs: dataSource.count)
     }
     
