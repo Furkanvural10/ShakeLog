@@ -13,6 +13,8 @@ class FileLogDestination: LogDestination, @unchecked Sendable {
     private let logFileURL: URL
     private let maxFileSize: Int = 5 * 1024 * 1024
     private let queue = DispatchQueue(label: "com.logger.file", qos: .utility)
+    private var fileHandle: FileHandle?
+    private var currentFileSize: Int = 0
     
     init() {
         let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -25,6 +27,26 @@ class FileLogDestination: LogDestination, @unchecked Sendable {
         let dateString = dateFormatter.string(from: Date())
         
         self.logFileURL = logsDirectory.appendingPathComponent("log_\(dateString).txt")
+        
+        // Initialize file handle and size
+        if !fileManager.fileExists(atPath: logFileURL.path) {
+            fileManager.createFile(atPath: logFileURL.path, contents: nil, attributes: nil)
+        }
+        
+        if let handle = try? FileHandle(forWritingTo: logFileURL) {
+            self.fileHandle = handle
+            self.fileHandle?.seekToEndOfFile()
+            
+            // Get initial file size
+            if let attributes = try? fileManager.attributesOfItem(atPath: logFileURL.path),
+               let size = attributes[.size] as? Int {
+                self.currentFileSize = size
+            }
+        }
+    }
+    
+    deinit {
+        try? fileHandle?.close()
     }
     
     func log(_ entry: LogEntry) {
@@ -35,34 +57,38 @@ class FileLogDestination: LogDestination, @unchecked Sendable {
             let fileName = (entry.file as NSString).lastPathComponent
             let logMessage = "\(timestamp) \(entry.level.icon) [\(entry.level.name)] [\(fileName):\(entry.line)] \(entry.function) -> \(entry.message)\n"
             
-            self.rotateLogFileIfNeeded()
+            guard let data = logMessage.data(using: .utf8) else { return }
             
-            if let data = logMessage.data(using: .utf8) {
-                if fileManager.fileExists(atPath: logFileURL.path) {
-                    if let fileHandle = try? FileHandle(forWritingTo: logFileURL) {
-                        fileHandle.seekToEndOfFile()
-                        fileHandle.write(data)
-                        fileHandle.closeFile()
-                    }
-                } else {
-                    try? data.write(to: logFileURL, options: .atomic)
-                }
+            self.rotateLogFileIfNeeded(appendingDataSize: data.count)
+            
+            if let fileHandle = self.fileHandle {
+                fileHandle.write(data)
+                self.currentFileSize += data.count
             }
         }
     }
     
-    private func rotateLogFileIfNeeded() {
-        guard let attributes = try? fileManager.attributesOfItem(atPath: logFileURL.path),
-              let fileSize = attributes[.size] as? Int,
-              fileSize > maxFileSize else {
-            return
+    private func rotateLogFileIfNeeded(appendingDataSize: Int) {
+        if currentFileSize + appendingDataSize > maxFileSize {
+            // Close current handle
+            try? fileHandle?.close()
+            fileHandle = nil
+            
+            let timestamp = Int(Date().timeIntervalSince1970)
+            let archiveURL = logFileURL.deletingLastPathComponent()
+                .appendingPathComponent("log_archive_\(timestamp).txt")
+            
+            try? fileManager.moveItem(at: logFileURL, to: archiveURL)
+            
+            // Create new file
+            fileManager.createFile(atPath: logFileURL.path, contents: nil, attributes: nil)
+            currentFileSize = 0
+            
+            // Re-open handle
+            if let handle = try? FileHandle(forWritingTo: logFileURL) {
+                self.fileHandle = handle
+            }
         }
-        
-        let timestamp = Int(Date().timeIntervalSince1970)
-        let archiveURL = logFileURL.deletingLastPathComponent()
-            .appendingPathComponent("log_archive_\(timestamp).txt")
-        
-        try? fileManager.moveItem(at: logFileURL, to: archiveURL)
     }
     
     func getLogFileURL() -> URL {
