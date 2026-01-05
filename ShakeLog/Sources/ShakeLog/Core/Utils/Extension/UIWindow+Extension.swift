@@ -46,7 +46,8 @@ extension UIWindow {
         
         switch ShakeLog.config.presentationMode {
         case .uiKit:
-            let logVC = LogViewController()
+            let viewModel: LogViewModelInterface = LogViewControllerModel()
+            let logVC = LogViewController(viewModel: viewModel)
             let navVC = UINavigationController(rootViewController: logVC)
             navVC.modalPresentationStyle = .fullScreen
             topVC.present(navVC, animated: true)
