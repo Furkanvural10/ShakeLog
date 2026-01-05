@@ -8,6 +8,7 @@
 import Foundation
 
 @available(iOS 13.0.0, *)
+@MainActor
 protocol LogViewModelInterface {
     
     var view: LogViewControllerInterface? { get set }
@@ -17,7 +18,7 @@ protocol LogViewModelInterface {
 
     func handleViewDidLoad() async
     func handleFilterLogs(searchBarText: String) async
-    func handleFilterChanged(index: Int) async
+    func handleFilterChanged(index: Int, searchBarText: String) async
     func handleClearButtonTapped() async
     
     func getNumberOfRowsInSection() -> Int
@@ -27,6 +28,7 @@ protocol LogViewModelInterface {
 
 
 @available(iOS 13.0.0, *)
+@MainActor
 final class LogViewControllerModel {
     weak var view: (any LogViewControllerInterface)?
     private(set) var dataSource: [LogEntry] = []
@@ -38,12 +40,12 @@ final class LogViewControllerModel {
 extension LogViewControllerModel: LogViewModelInterface {
     
     func handleViewDidLoad() async {
-        await LoadLogs()
+        await loadLogs()
         await view?.setupUI()
         
     }
     
-    private func LoadLogs() async {
+    private func loadLogs() async {
         dataSource = Logger.shared.getMemoryLogs()
         await view?.updateHeader(filteredLogs: filteredLogs.count, allLogs: dataSource.count)
     }
@@ -66,15 +68,15 @@ extension LogViewControllerModel: LogViewModelInterface {
         await view?.reloadTableView()
     }
     
-    func handleFilterChanged(index: Int) async {
+    func handleFilterChanged(index: Int, searchBarText: String) async {
         selectedLevel = index == 0 ? nil : LogLevel.allCases[index - 1]
-        await handleFilterLogs(searchBarText: "")
+        await handleFilterLogs(searchBarText: searchBarText)
         await view?.updateHeader(filteredLogs: filteredLogs.count, allLogs: dataSource.count)
     }
     
     func handleClearButtonTapped() async {
         Logger.shared.clearMemoryLogs()
-        await LoadLogs()
+        await loadLogs()
     }
     
     func getNumberOfRowsInSection() -> Int {

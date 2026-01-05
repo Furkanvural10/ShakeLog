@@ -9,6 +9,7 @@ import UIKit
 
 
 @available(iOS 13.0.0, *)
+@MainActor
 protocol LogViewControllerInterface: AnyObject {
     func setupUI() async
     func updateHeader(filteredLogs: Int, allLogs: Int) async
@@ -77,9 +78,7 @@ final class LogViewController: UIViewController {
     
     
     func reloadTableView() {
-        DispatchQueue.main.async { [weak self] in
-            self?.tableView.reloadData()
-        }
+        self.tableView.reloadData()
     }
     
     func updateHeader(filteredLogs: Int, allLogs: Int) {
@@ -88,9 +87,8 @@ final class LogViewController: UIViewController {
     
     @objc private func filterChanged() {
         Task { @MainActor [viewModel] in
-            await viewModel.handleFilterChanged(index: filterSegmentedControl.selectedSegmentIndex)
+            await viewModel.handleFilterChanged(index: filterSegmentedControl.selectedSegmentIndex, searchBarText: searchBar.text ?? "")
         }
-        
     }
     
     @objc private func closeTapped() {
