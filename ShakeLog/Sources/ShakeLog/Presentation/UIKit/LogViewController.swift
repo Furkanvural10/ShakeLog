@@ -11,7 +11,8 @@ import UIKit
 @available(iOS 13.0.0, *)
 protocol LogViewControllerInterface: AnyObject {
     func setupUI() async
-    func updateHeader(filteredLogs: Int, allLogs: Int)
+    func updateHeader(filteredLogs: Int, allLogs: Int) async
+    func reloadTableView() async
 }
 
 
@@ -70,35 +71,15 @@ final class LogViewController: UIViewController {
         Task {
             @MainActor [viewModel] in
             await viewModel.handleViewDidLoad()
-        }
-        
-        
+            await viewModel.handleFilterLogs(searchBarText: searchBar.text!)
+        }   
     }
     
     
-    
-    private func loadLogs() async {
-        
-        filterLogs()
-        
-    }
-    
-    private func filterLogs() {
-        filteredLogs = allLogs
-        
-        if let level = selectedLevel {
-            filteredLogs = filteredLogs.filter { $0.level == level }
+    func reloadTableView() {
+        DispatchQueue.main.async { [weak self] in
+            self?.tableView.reloadData()
         }
-        
-        if let searchText = searchBar.text, !searchText.isEmpty {
-            filteredLogs = filteredLogs.filter {
-                $0.message.localizedCaseInsensitiveContains(searchText) ||
-                $0.function.localizedCaseInsensitiveContains(searchText) ||
-                $0.file.localizedCaseInsensitiveContains(searchText)
-            }
-        }
-        
-        tableView.reloadData()
     }
     
     func updateHeader(filteredLogs: Int, allLogs: Int) {
@@ -106,10 +87,10 @@ final class LogViewController: UIViewController {
     }
     
     @objc private func filterChanged() {
-        let index = filterSegmentedControl.selectedSegmentIndex
-        selectedLevel = index == 0 ? nil : LogLevel.allCases[index - 1]
-        filterLogs()
-        updateHeader()
+        Task { @MainActor [viewModel] in
+            await viewModel.handleFilterChanged(index: filterSegmentedControl.selectedSegmentIndex)
+        }
+        
     }
     
     @objc private func closeTapped() {
@@ -139,8 +120,10 @@ final class LogViewController: UIViewController {
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Clear", style: .destructive) { [weak self] _ in
-            Logger.shared.clearMemoryLogs()
-            self?.loadLogs()
+            guard let self else { return }
+            Task { @MainActor [viewModel] in
+                await viewModel.handleClearButtonTapped()
+            }
         })
         
         present(alert, animated: true)
@@ -151,20 +134,19 @@ final class LogViewController: UIViewController {
 @available(iOS 13.0.0, *)
 extension LogViewController: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return filteredLogs.count
+        return viewModel.getNumberOfRowsInSection()
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "LogCell", for: indexPath) as! LogCell
-        let log = filteredLogs[indexPath.row]
-        cell.configure(with: log)
+        cell.configure(with: viewModel.getItem(indexPath: indexPath))
         return cell
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        let log = filteredLogs[indexPath.row]
-        showLogDetail(log)
+        
+        showLogDetail(viewModel.getItem(indexPath: indexPath))
     }
     
     private func showLogDetail(_ log: LogEntry) {
@@ -193,8 +175,11 @@ extension LogViewController: UITableViewDelegate, UITableViewDataSource {
 @available(iOS 13.0.0, *)
 extension LogViewController: UISearchBarDelegate {
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        filterLogs()
-        updateHeader()
+        Task { @MainActor [viewModel] in
+            await viewModel.handleFilterLogs(searchBarText: searchBar.text!)
+        }
+        
+        
     }
     
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {

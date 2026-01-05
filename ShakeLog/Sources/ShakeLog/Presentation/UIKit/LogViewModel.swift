@@ -16,6 +16,12 @@ protocol LogViewModelInterface {
     var selectedLevel: LogLevel? { get }
 
     func handleViewDidLoad() async
+    func handleFilterLogs(searchBarText: String) async
+    func handleFilterChanged(index: Int) async
+    func handleClearButtonTapped() async
+    
+    func getNumberOfRowsInSection() -> Int
+    func getItem(indexPath: IndexPath) -> LogEntry
 
 }
 
@@ -39,17 +45,45 @@ extension LogViewControllerModel: LogViewModelInterface {
     
     private func LoadLogs() async {
         dataSource = Logger.shared.getMemoryLogs()
-        view?.updateHeader(filteredLogs: filteredLogs.count, allLogs: dataSource.count)
+        await view?.updateHeader(filteredLogs: filteredLogs.count, allLogs: dataSource.count)
     }
     
-    private func filterLogs() {
+    func handleFilterLogs(searchBarText: String) async {
         filteredLogs = dataSource
         
         if let level = selectedLevel {
             filteredLogs = filteredLogs.filter { $0.level == level }
         }
         
+        if !searchBarText.isEmpty {
+            filteredLogs = filteredLogs.filter {
+                $0.message.localizedCaseInsensitiveContains(searchBarText) ||
+                $0.function.localizedCaseInsensitiveContains(searchBarText) ||
+                $0.file.localizedCaseInsensitiveContains(searchBarText)
+            }
+        }
         
-        // TableView reload !!
+        await view?.reloadTableView()
     }
+    
+    func handleFilterChanged(index: Int) async {
+        selectedLevel = index == 0 ? nil : LogLevel.allCases[index - 1]
+        await handleFilterLogs(searchBarText: "")
+        await view?.updateHeader(filteredLogs: filteredLogs.count, allLogs: dataSource.count)
+    }
+    
+    func handleClearButtonTapped() async {
+        Logger.shared.clearMemoryLogs()
+        await LoadLogs()
+    }
+    
+    func getNumberOfRowsInSection() -> Int {
+        return filteredLogs.count
+    }
+    
+    func getItem(indexPath: IndexPath) -> LogEntry {
+        return filteredLogs[indexPath.row]
+    }
+    
+    
 }
