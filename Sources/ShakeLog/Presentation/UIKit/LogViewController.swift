@@ -51,7 +51,7 @@ final class LogViewController: UIViewController {
     
     private let searchBar: UISearchBar = {
         let search = UISearchBar()
-        search.placeholder = "Search logs..."
+        search.placeholder = Constant.LogViewController.searchBarText.rawValue
         search.translatesAutoresizingMaskIntoConstraints = false
         return search
     }()
@@ -111,13 +111,13 @@ final class LogViewController: UIViewController {
     
     @objc private func clearTapped() {
         let alert = UIAlertController(
-            title: "Clear Logs",
-            message: "Are you sure you want to clear all logs?",
+            title: Constant.LogViewController.clearLogAlertTitle.rawValue,
+            message: Constant.LogViewController.clearLogMessage.rawValue,
             preferredStyle: .alert
         )
         
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Clear", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: Constant.LogViewController.cancelActionTitle.rawValue, style: .cancel))
+        alert.addAction(UIAlertAction(title: Constant.LogViewController.clearActionTitle.rawValue, style: .destructive) { [weak self] _ in
             guard let self else { return }
             Task { @MainActor [viewModel] in
                 await viewModel.handleClearButtonTapped()
@@ -160,11 +160,11 @@ extension LogViewController: UITableViewDelegate, UITableViewDataSource {
         \(log.message)
         """
         
-        let alert = UIAlertController(title: "Log Detail", message: detail, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "Copy", style: .default) { _ in
+        let alert = UIAlertController(title: Constant.LogViewController.logDetailsAlertTitle.rawValue, message: detail, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: Constant.LogViewController.logCopyActionTitle.rawValue, style: .default) { _ in
             UIPasteboard.general.string = detail
         })
-        alert.addAction(UIAlertAction(title: "Close", style: .cancel))
+        alert.addAction(UIAlertAction(title: Constant.LogViewController.logDetailCloseActionTitle.rawValue, style: .cancel))
         present(alert, animated: true)
     }
 }
@@ -188,7 +188,7 @@ extension LogViewController: UISearchBarDelegate {
 @available(iOS 13.0.0, *)
 extension LogViewController: LogViewControllerInterface {
     func setupUI() {
-        title = "App Logs"
+        title = Constant.LogViewController.pageTitle.rawValue
         view.backgroundColor = .systemBackground
         
         navigationItem.leftBarButtonItem = UIBarButtonItem(
@@ -221,7 +221,7 @@ extension LogViewController: LogViewControllerInterface {
         
         tableView.delegate = self
         tableView.dataSource = self
-        tableView.register(LogCell.self, forCellReuseIdentifier: "LogCell")
+        tableView.register(LogCell.self, forCellReuseIdentifier: LogCell.identifier)
         
 
         searchBar.delegate = self

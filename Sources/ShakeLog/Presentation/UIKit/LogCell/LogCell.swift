@@ -11,6 +11,8 @@ import UIKit
 @available(iOS 13.0, *)
 final class LogCell: UITableViewCell {
     
+    static let identifier: String = "LogCell"
+    
     private let iconLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 20)
