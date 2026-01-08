@@ -12,4 +12,7 @@ struct AccessibilityIDs {
     static let logViewController = "logViewController"
     static let logViewControllerTitle = "logViewControllerTitle"
     static let logTableView = "logTableView"
+    static let logFilterSegmentedControl = "logFilterSegmentedControl"
+    static let logSearchBar = "logSearchBar"
+    static let logHeader = "logHeader"
 }

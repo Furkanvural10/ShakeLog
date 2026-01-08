@@ -38,12 +38,14 @@ final class LogViewController: UIViewController {
         table.rowHeight = UITableView.automaticDimension
         table.estimatedRowHeight = 100
         table.separatorStyle = .singleLine
+        table.accessibilityIdentifier = AccessibilityIDs.logTableView
         return table
     }()
     
     private let filterSegmentedControl: UISegmentedControl = {
         let items = ["All"] + LogLevel.allCases.map { $0.icon }
         let control = UISegmentedControl(items: items)
+        control.accessibilityIdentifier = AccessibilityIDs.logFilterSegmentedControl
         control.selectedSegmentIndex = 0
         control.translatesAutoresizingMaskIntoConstraints = false
         return control
@@ -53,6 +55,7 @@ final class LogViewController: UIViewController {
         let search = UISearchBar()
         search.placeholder = Constant.LogViewController.searchBarText.rawValue
         search.translatesAutoresizingMaskIntoConstraints = false
+        search.accessibilityIdentifier = AccessibilityIDs.logSearchBar
         return search
     }()
     
@@ -62,11 +65,13 @@ final class LogViewController: UIViewController {
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = .secondaryLabel
         label.translatesAutoresizingMaskIntoConstraints = false
+        label.accessibilityIdentifier = AccessibilityIDs.logHeader
         return label
     }()
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        view.accessibilityIdentifier = AccessibilityIDs.logViewController
         viewModel.view = self
         
         Task {
